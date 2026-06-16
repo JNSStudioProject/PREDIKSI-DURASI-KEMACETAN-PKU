@@ -1,0 +1,178 @@
+/* assets/style.css */
+
+/* ==========================================
+   GLOBAL RESET & APP BACKGROUND (PINK PASTEL)
+   ========================================== */
+.stApp {
+    background-color: #ffffff !important; /* Latar belakang pink pastel yang sangat lembut (Rose 50) */
+    color: #4c0519 !important; /* Teks utama menggunakan warna mawar gelap pekat */
+    font-family: 'Inter', -apple-system, sans-serif;
+}
+
+/* Menyembunyikan elemen bawaan Streamlit */
+[data-testid="stHeader"], 
+footer, 
+#MainMenu {
+    visibility: hidden;
+    height: 0px;
+    padding: 0;
+}
+
+/* ==========================================
+   SIDEBAR PREMIUM REPLICATION (ROSE DEEP BERRY)
+   ========================================== */
+section[data-testid="stSidebar"] {
+    background-color: #4c0519 !important; /* Warna Berry/Mawar gelap pekat yang mewah (Rose 950) */
+    color: #ffe4e6 !important;
+    border-right: none !important;
+}
+
+/* Mengubah warna teks label input di dalam sidebar */
+section[data-testid="stSidebar"] .stMarkdown p,
+section[data-testid="stSidebar"] label {
+    color: #ffffff !important; /* Pink muda halus */
+    font-weight: 500 !important;
+}
+
+/* Mempercantik kotak input & selectbox di dalam sidebar */
+section[data-testid="stSidebar"] div[data-baseweb="select"],
+section[data-testid="stSidebar"] div[data-testid="stNumberInput"] {
+    background-color: #881337 !important; /* Berry sedang (Rose 900) */
+    border: 1px solid #9f1239 !important;
+    border-radius: 8px !important;
+}
+
+section[data-testid="stSidebar"] input {
+    color: rgb(0, 0, 0) !important;
+}
+
+/* Profile Section Header di Sidebar */
+.sidebar-profile {
+    text-align: center;
+    padding: 20px 10px 30px 10px;
+    border-bottom: 1px solid #881337;
+    margin-bottom: 20px;
+}
+.profile-avatar {
+    font-size: 50px;
+    background: #881337;
+    width: 80px;
+    height: 80px;
+    line-height: 80px;
+    border-radius: 50%;
+    margin: 0 auto 12px auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* ==========================================
+   TOP HEADER NAVBAR (MAIN CONTENT)
+   ========================================== */
+.main-header {
+    background-color: rgb(253, 232, 232);
+    padding: 20px 32px;
+    margin: -75px -50px 25px -50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.04);
+    border-bottom: 1px solid #ffe4e6;
+}
+
+/* ==========================================
+   CARD LOGIC (WHITE WITH ROSE GLOW)
+   ========================================== */
+div[data-testid="stVerticalBlockBorder"] {
+    background-color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    box-shadow: 0 4px 20px rgba(225, 29, 72, 0.03) !important; /* Efek shadow dengan rona rose tipis */
+    margin-bottom: 16px !important;
+}
+
+div[data-testid="stColumn"] div[data-testid="stVerticalBlockBorder"] {
+    margin-bottom: 0px !important;
+}
+
+.card-title {
+    font-size: 13px !important;
+    text-transform: uppercase !important;
+    color: #9f1239 !important; /* Warna judul kartu Rose gelap */
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 15px !important;
+}
+
+/* ==========================================
+   MINI SUMMARY STATS GRID (Atas / Ringkasan)
+   ========================================== */
+.mini-card-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.mini-stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.02);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #fff1f2;
+}
+.mini-stat-card.active-blue {
+    background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important; /* Diganti menjadi Vivid Pink/Rose */
+    color: white !important;
+    border: none !important;
+}
+.mini-stat-card.active-blue .mini-label { color: #fecdd3; }
+.mini-stat-card.active-blue .mini-val { color: white; }
+
+.mini-label { font-size: 11px; text-transform: uppercase; color: #a21caf; font-weight: 600; letter-spacing: 0.3px; }
+.mini-val { font-size: 20px; font-weight: 700; color: #4c0519; margin-top: 4px; }
+
+/* ==========================================
+   COMPONENTS & BUTTONS (HOT PINK ACCENT)
+   ========================================== */
+/* Tombol Utama Jalankan Prediksi */
+.stButton > button {
+    width: 100% !important;
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important; /* Aksen tombol Hot Pink cerah */
+    color: white !important;
+    border: none !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 14px rgba(244, 63, 94, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+.stButton > button:hover {
+    background: #be123c !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(244, 63, 94, 0.4) !important;
+}
+
+/* Status Alert Banners */
+.status-banner {
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+.status-banner.lancar { background-color: #f0fdf4; color: #166534; border-left: 4px solid #10b981; }
+.status-banner.agak { background-color: #fefce8; color: #854d0e; border-left: 4px solid #f59e0b; }
+.status-banner.padat { background-color: #fff7ed; color: #c2410c; border-left: 4px solid #f97316; }
+.status-banner.macet { background-color: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+
+/* Result Card */
+.metric-box {
+    text-align: center;
+    padding: 10px 0;
+}
+.metric-title { font-size: 12px; text-transform: uppercase; color: #9f1239; font-weight: 600; }
+.metric-value { font-size: 32px; font-weight: 700; color: #4c0519; margin-top: 4px; }
+.metric-unit { font-size: 12px; color: #fda4af; font-weight: 400; }
