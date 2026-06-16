@@ -6,3 +6,4 @@ plotly
 pydeck
 joblib
 requests
+scikit-learn
