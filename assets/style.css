@@ -1,11 +1,11 @@
 /* assets/style.css */
 
 /* ==========================================
-   GLOBAL RESET & APP BACKGROUND (PINK PASTEL)
+   GLOBAL RESET & APP BACKGROUND (PROFESSIONAL SLATE)
    ========================================== */
 .stApp {
-    background-color: #ffffff !important; /* Latar belakang pink pastel yang sangat lembut (Rose 50) */
-    color: #4c0519 !important; /* Teks utama menggunakan warna mawar gelap pekat */
+    background-color: #f8fafc !important; /* Latar belakang abu-abu terang (Slate 50) */
+    color: #0f172a !important; /* Teks utama abu-abu sangat gelap (Slate 900) */
     font-family: 'Inter', -apple-system, sans-serif;
 }
 
@@ -18,44 +18,54 @@ footer,
     padding: 0;
 }
 
+/* Mengurangi margin/padding bawaan Streamlit */
+div.block-container {
+    padding-top: 1rem !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    padding-bottom: 2rem !important;
+    max-width: 100% !important;
+}
+
 /* ==========================================
-   SIDEBAR PREMIUM REPLICATION (ROSE DEEP BERRY)
+   SIDEBAR PREMIUM REPLICATION (SLATE 900)
    ========================================== */
 section[data-testid="stSidebar"] {
-    background-color: #4c0519 !important; /* Warna Berry/Mawar gelap pekat yang mewah (Rose 950) */
-    color: #ffe4e6 !important;
+    background-color: #0f172a !important; /* Slate 900 */
+    color: #f8fafc !important; /* Slate 50 */
     border-right: none !important;
 }
 
 /* Mengubah warna teks label input di dalam sidebar */
 section[data-testid="stSidebar"] .stMarkdown p,
-section[data-testid="stSidebar"] label {
-    color: #ffffff !important; /* Pink muda halus */
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] div[data-testid="stCheckbox"] p,
+section[data-testid="stSidebar"] div[data-testid="stCheckbox"] span {
+    color: #f1f5f9 !important; /* Slate 100 */
     font-weight: 500 !important;
 }
 
 /* Mempercantik kotak input & selectbox di dalam sidebar */
 section[data-testid="stSidebar"] div[data-baseweb="select"],
 section[data-testid="stSidebar"] div[data-testid="stNumberInput"] {
-    background-color: #881337 !important; /* Berry sedang (Rose 900) */
-    border: 1px solid #9f1239 !important;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
 }
 
 section[data-testid="stSidebar"] input {
-    color: rgb(0, 0, 0) !important;
+    color: #0f172a !important; /* Warna gelap agar kontras dengan background putih */
+    font-weight: 600 !important;
 }
 
 /* Profile Section Header di Sidebar */
 .sidebar-profile {
     text-align: center;
     padding: 20px 10px 30px 10px;
-    border-bottom: 1px solid #881337;
+    border-bottom: 1px solid #334155;
     margin-bottom: 20px;
 }
 .profile-avatar {
     font-size: 50px;
-    background: #881337;
+    background: #1e293b;
     width: 80px;
     height: 80px;
     line-height: 80px;
@@ -68,25 +78,33 @@ section[data-testid="stSidebar"] input {
    TOP HEADER NAVBAR (MAIN CONTENT)
    ========================================== */
 .main-header {
-    background-color: rgb(253, 232, 232);
+    background-color: #ffffff;
     padding: 20px 32px;
-    margin: -75px -50px 25px -50px;
+    margin: -1rem -2rem 25px -2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.04);
-    border-bottom: 1px solid #ffe4e6;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tab-header {
+    background-color: #ffffff;
+    padding: 20px 32px;
+    margin: 10px -2rem 25px -2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid #e2e8f0;
 }
 
 /* ==========================================
-   CARD LOGIC (WHITE WITH ROSE GLOW)
+   CARD LOGIC (WHITE WITH SUBTLE SHADOW)
    ========================================== */
 div[data-testid="stVerticalBlockBorder"] {
     background-color: white !important;
-    border: none !important;
-    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
     padding: 24px !important;
-    box-shadow: 0 4px 20px rgba(225, 29, 72, 0.03) !important; /* Efek shadow dengan rona rose tipis */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important; 
     margin-bottom: 16px !important;
 }
 
@@ -97,7 +115,7 @@ div[data-testid="stColumn"] div[data-testid="stVerticalBlockBorder"] {
 .card-title {
     font-size: 13px !important;
     text-transform: uppercase !important;
-    color: #9f1239 !important; /* Warna judul kartu Rose gelap */
+    color: #475569 !important; /* Slate 600 */
     font-weight: 700 !important;
     letter-spacing: 0.5px !important;
     margin-bottom: 15px !important;
@@ -114,51 +132,84 @@ div[data-testid="stColumn"] div[data-testid="stVerticalBlockBorder"] {
 }
 .mini-stat-card {
     background: white;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 16px 20px;
-    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     display: flex;
     flex-direction: column;
-    border: 1px solid #fff1f2;
+    border: 1px solid #f1f5f9;
 }
 .mini-stat-card.active-blue {
-    background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important; /* Diganti menjadi Vivid Pink/Rose */
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important; /* Corporate dark slate */
     color: white !important;
     border: none !important;
 }
-.mini-stat-card.active-blue .mini-label { color: #fecdd3; }
+.mini-stat-card.active-blue .mini-label { color: #cbd5e1; }
 .mini-stat-card.active-blue .mini-val { color: white; }
 
-.mini-label { font-size: 11px; text-transform: uppercase; color: #a21caf; font-weight: 600; letter-spacing: 0.3px; }
-.mini-val { font-size: 20px; font-weight: 700; color: #4c0519; margin-top: 4px; }
+.mini-label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.3px; }
+.mini-val { font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 4px; }
 
 /* ==========================================
-   COMPONENTS & BUTTONS (HOT PINK ACCENT)
+   COMPONENTS & BUTTONS (CORPORATE BLUE)
    ========================================== */
 /* Tombol Utama Jalankan Prediksi */
 .stButton > button {
     width: 100% !important;
-    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important; /* Aksen tombol Hot Pink cerah */
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important; /* Corporate Blue */
     color: white !important;
     border: none !important;
     padding: 12px !important;
-    border-radius: 8px !important;
-    font-weight: 700 !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
     font-size: 14px !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    box-shadow: 0 4px 14px rgba(244, 63, 94, 0.3) !important;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2) !important;
     transition: all 0.2s ease !important;
 }
 .stButton > button:hover {
-    background: #be123c !important;
+    background: #1d4ed8 !important;
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(244, 63, 94, 0.4) !important;
+    box-shadow: 0 6px 15px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Tombol Download CSV (Kecil, Rapi, Warna Navbar #0f172a) */
+div[data-testid="stDownloadButton"] > button {
+    width: 100% !important;
+    background-color: #0f172a !important; 
+    color: white !important;
+    border: none !important;
+    padding: 6px 16px !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    text-transform: none;
+    letter-spacing: 0px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s ease !important;
+}
+div[data-testid="stDownloadButton"] > button:hover {
+    background-color: #1e293b !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Samakan tinggi dan padding Link Button (Google Calendar) dengan Download Button */
+div[data-testid="stLinkButton"] > a {
+    width: 100% !important;
+    display: block !important;
+    text-align: center !important;
+    padding: 6px 16px !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* Status Alert Banners */
 .status-banner {
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 16px 20px;
     margin-bottom: 20px;
     font-weight: 600;
@@ -173,6 +224,6 @@ div[data-testid="stColumn"] div[data-testid="stVerticalBlockBorder"] {
     text-align: center;
     padding: 10px 0;
 }
-.metric-title { font-size: 12px; text-transform: uppercase; color: #9f1239; font-weight: 600; }
-.metric-value { font-size: 32px; font-weight: 700; color: #4c0519; margin-top: 4px; }
-.metric-unit { font-size: 12px; color: #fda4af; font-weight: 400; }
+.metric-title { font-size: 12px; text-transform: uppercase; color: #475569; font-weight: 600; }
+.metric-value { font-size: 32px; font-weight: 700; color: #0f172a; margin-top: 4px; }
+.metric-unit { font-size: 12px; color: #64748b; font-weight: 400; }
