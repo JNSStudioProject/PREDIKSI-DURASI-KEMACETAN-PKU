@@ -314,13 +314,14 @@ if not st.session_state.prediction_results:
 else:
     res = st.session_state.prediction_results
     
-    tab1, tab2, tab5, tab7, tab3, tab4, tab6 = st.tabs([
+    tab1, tab2, tab5, tab7, tab3, tab4, tab8, tab6 = st.tabs([
         "Analisis & Grafik", 
         "Peta Pantauan", 
         "AI Assistant", 
         "Manajemen Armada",
         "Dataset Interaktif", 
         "Evaluasi Model", 
+        "Time Series Analysis",
         "Subscribe"
     ])
     
@@ -774,6 +775,21 @@ else:
                 st.metric("Estimasi Pemborosan BBM", f"Rp {kerugian_terbaik:,.0f}")
                 
             st.info(f"**Keputusan Bisnis:** Dengan mematuhi rekomendasi AI TrafficLSTM, perusahaan dapat menghemat biaya operasional hingga **Rp {penghematan:,.0f}** hanya pada rentang keberangkatan ini.")
+    with tab8:
+        st.markdown("""<div class="tab-header">
+            <h1 style="margin:0; font-size:22px; font-weight:700; color:#1e293b;">Analisis Time Series & Autokorelasi</h1>
+        </div>""", unsafe_allow_html=True)
+        st.markdown("Bagian ini menampilkan hasil analisis time series dari dataset volume lalu lintas I-94 yang digunakan dalam pengembangan model Deep Learning (LSTM). Analisis ini mencakup pola musiman (seasonal), stasioneritas, serta fungsi autokorelasi.")
+        
+        st.markdown('<div class="card-title" style="margin-top: 20px;">Dekomposisi Time Series — Pola Musiman</div>', unsafe_allow_html=True)
+        st.image("assets/img/decomposition.png", use_container_width=True, caption="Dekomposisi Additive menunjukkan komponen Tren, Musiman (Seasonal 7 hari), dan Residu.")
+        
+        st.markdown('<div class="card-title" style="margin-top: 20px;">Rolling Mean & Standard Deviation</div>', unsafe_allow_html=True)
+        st.image("assets/img/rolling_mean.png", use_container_width=True, caption="Rata-rata bergerak (Rolling Mean) harian untuk mengamati perataan fluktuasi jangka pendek.")
+        
+        st.markdown('<div class="card-title" style="margin-top: 20px;">Fungsi Autokorelasi (ACF & PACF)</div>', unsafe_allow_html=True)
+        st.image("assets/img/acf_pacf.png", use_container_width=True, caption="Korelasi lag secara harian maupun per jam untuk mendeteksi seberapa kuat nilai lampau mempengaruhi masa depan (penting untuk window timesteps di LSTM).")
+
     with tab6:
         st.markdown("""<div class="tab-header">
             <h1 style="margin:0; font-size:22px; font-weight:700; color:#1e293b;">Subscribe Peringatan Dini</h1>
