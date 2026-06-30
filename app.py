@@ -8,6 +8,9 @@ import requests
 from predictor import predict_traffic
 from datetime import datetime, timedelta
 import urllib.parse
+from plotly.subplots import make_subplots
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.stattools import acf, pacf
 
 # ==========================================
 # CONFIG & INITIALIZATION
@@ -779,16 +782,48 @@ else:
         st.markdown("""<div class="tab-header">
             <h1 style="margin:0; font-size:22px; font-weight:700; color:#1e293b;">Analisis Time Series & Autokorelasi</h1>
         </div>""", unsafe_allow_html=True)
-        st.markdown("Bagian ini menampilkan hasil analisis time series dari dataset volume lalu lintas I-94 yang digunakan dalam pengembangan model Deep Learning (LSTM). Analisis ini mencakup pola musiman (seasonal), stasioneritas, serta fungsi autokorelasi.")
+        st.markdown("Bagian ini menampilkan hasil analisis time series secara interaktif. **Arahkan kursor (hover)** Anda ke garis grafik untuk melihat nilai spesifik pada tiap titik data.")
         
-        st.markdown('<div class="card-title" style="margin-top: 20px;">Dekomposisi Time Series — Pola Musiman</div>', unsafe_allow_html=True)
-        st.image("assets/img/decomposition.png", use_container_width=True, caption="Dekomposisi Additive menunjukkan komponen Tren, Musiman (Seasonal 7 hari), dan Residu.")
-        
-        st.markdown('<div class="card-title" style="margin-top: 20px;">Rolling Mean & Standard Deviation</div>', unsafe_allow_html=True)
-        st.image("assets/img/rolling_mean.png", use_container_width=True, caption="Rata-rata bergerak (Rolling Mean) harian untuk mengamati perataan fluktuasi jangka pendek.")
-        
-        st.markdown('<div class="card-title" style="margin-top: 20px;">Fungsi Autokorelasi (ACF & PACF)</div>', unsafe_allow_html=True)
-        st.image("assets/img/acf_pacf.png", use_container_width=True, caption="Korelasi lag secara harian maupun per jam untuk mendeteksi seberapa kuat nilai lampau mempengaruhi masa depan (penting untuk window timesteps di LSTM).")
+        @st.cache_data
+        def get_ts_data():
+            df_asli = load_csv_data()
+            df_asli['date_time'] = pd.to_datetime(df_asli['date_time'], format='mixed', dayfirst=False)
+            df_asli = df_asli.sort_values('date_time').drop_duplicates(subset='date_time').reset_index(drop=True)
+            ts_daily = df_asli.set_index('date_time')['traffic_volume'].resample('D').mean().dropna()
+            ts_hourly = df_asli.set_index('date_time')['traffic_volume'].dropna()
+            return ts_daily, ts_hourly
+            
+        try:
+            ts_daily, ts_hourly = get_ts_data()
+            
+            # 1. Dekomposisi
+            st.markdown('<div class="card-title" style="margin-top: 20px;">Dekomposisi Time Series — Pola Musiman</div>', unsafe_allow_html=True)
+            decomp = seasonal_decompose(ts_daily, model='additive', period=7, extrapolate_trend='freq')
+            fig_decomp = make_subplots(rows=3, cols=1, shared_xaxes=True, subplot_titles=('Data Raw (Mentah)', 'Trend (Jangka Panjang)', 'Seasonal (Siklus Mingguan)'))
+            fig_decomp.add_trace(go.Scatter(x=ts_daily.index, y=decomp.observed, mode='lines', name='Data Raw', line=dict(color='#3b82f6')), row=1, col=1)
+            fig_decomp.add_trace(go.Scatter(x=ts_daily.index, y=decomp.trend, mode='lines', name='Trend', line=dict(color='#f59e0b')), row=2, col=1)
+            fig_decomp.add_trace(go.Scatter(x=ts_daily.index, y=decomp.seasonal, mode='lines', name='Seasonal', line=dict(color='#10b981')), row=3, col=1)
+            fig_decomp.update_layout(height=600, margin=dict(l=20, r=20, t=40, b=20), showlegend=False, hovermode="x unified")
+            st.plotly_chart(fig_decomp, use_container_width=True)
+            
+            # 2. Rolling Mean
+            st.markdown('<div class="card-title" style="margin-top: 20px;">Rolling Mean & Standard Deviation</div>', unsafe_allow_html=True)
+            rolling_mean = ts_daily.rolling(window=30).mean()
+            rolling_std = ts_daily.rolling(window=30).std()
+            fig_rolling = go.Figure()
+            fig_rolling.add_trace(go.Scatter(x=ts_daily.index, y=ts_daily, mode='lines', name='Harian Asli', line=dict(color='#3b82f6', width=1), opacity=0.4))
+            fig_rolling.add_trace(go.Scatter(x=ts_daily.index, y=rolling_mean + rolling_std, mode='lines', name='+1 Std', line=dict(color='#fcd34d', width=0), showlegend=False, hoverinfo='skip'))
+            fig_rolling.add_trace(go.Scatter(x=ts_daily.index, y=rolling_mean - rolling_std, mode='lines', name='-1 Std', line=dict(color='#fcd34d', width=0), fill='tonexty', showlegend=False, hoverinfo='skip'))
+            fig_rolling.add_trace(go.Scatter(x=ts_daily.index, y=rolling_mean, mode='lines', name='Rolling Mean (30 hari)', line=dict(color='#f59e0b', width=2)))
+            fig_rolling.update_layout(height=400, margin=dict(l=20, r=20, t=40, b=20), legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01), hovermode="x unified")
+            st.plotly_chart(fig_rolling, use_container_width=True)
+            
+            # 3. ACF PACF
+            st.markdown('<div class="card-title" style="margin-top: 20px;">Fungsi Autokorelasi (ACF & PACF)</div>', unsafe_allow_html=True)
+            st.image("assets/img/acf_pacf.png", use_container_width=True, caption="Korelasi lag secara harian maupun per jam untuk mendeteksi seberapa kuat nilai lampau mempengaruhi masa depan (penting untuk window timesteps di LSTM).")
+            
+        except Exception as e:
+            st.error(f"Gagal memproses data Time Series: {e}")
 
     with tab6:
         st.markdown("""<div class="tab-header">
