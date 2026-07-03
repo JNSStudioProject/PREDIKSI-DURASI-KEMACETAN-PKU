@@ -44,32 +44,39 @@ for route in routes:
             weather = current_weather
             
             # Cek Jam Sibuk (Rush Hour: 07-09, 16-18)
-            is_rush_hour = 1 if (7 <= dt.hour <= 9) or (16 <= dt.hour <= 18) else 0
+            is_rush_hour = 1 if dt.hour in [7, 8, 16, 17] else 0
             
             # Cek Weekend
             is_weekend = 1 if dt.weekday() >= 5 else 0
             
-            # Simulasi Volume Kendaraan (lebih deterministik)
-            hour_factor = np.sin(np.pi * dt.hour / 24)
-            if 0 <= dt.hour <= 5: # Dini hari sepi
-                base_volume = int(200 + random.randint(-50, 50))
-            elif is_rush_hour:
-                base_volume = int(2500 + random.randint(-200, 200))
-                if is_weekend: # Weekend rush hour is less intense
-                    base_volume -= 800
-            else:
-                base_volume = int(1000 + hour_factor * 800 + random.randint(-100, 100))
+            # Simulasi Volume Kendaraan (berdasarkan profil jam dan jarak)
+            base_volume_route = distance_km * 300
+            hourly_profiles = {
+                0: 0.1, 1: 0.05, 2: 0.05, 3: 0.05, 4: 0.1, 
+                5: 0.3, 6: 0.7, 7: 1.0, 8: 0.9, 9: 0.7, 
+                10: 0.6, 11: 0.6, 12: 0.7, 13: 0.6, 14: 0.6, 
+                15: 0.7, 16: 0.9, 17: 1.0, 18: 0.9, 19: 0.6, 
+                20: 0.4, 21: 0.3, 22: 0.2, 23: 0.1
+            }
+            volume_multiplier = hourly_profiles.get(dt.hour, 0.5)
+            
+            if is_weekend:
+                volume_multiplier *= 0.6
+                
+            noise = random.uniform(0.9, 1.1)
+            base_volume = int(base_volume_route * volume_multiplier * noise)
                 
             # Simulasi Kecepatan Rata-Rata Normal
             normal_speed = 50.0
             actual_speed = normal_speed
             
-            # Pengurangan kecepatan karena volume tinggi (lebih deterministik)
-            if base_volume > 2000:
-                actual_speed -= 20 + random.uniform(-2, 2)
-            elif base_volume > 1500:
-                actual_speed -= 10 + random.uniform(-2, 2)
-            elif base_volume > 1000:
+            # Pengurangan kecepatan karena volume tinggi (dihitung per kilometer, bukan absolut)
+            density = base_volume / distance_km
+            if density > 250:
+                actual_speed -= 25 + random.uniform(-2, 2)
+            elif density > 200:
+                actual_speed -= 15 + random.uniform(-2, 2)
+            elif density > 150:
                 actual_speed -= 5 + random.uniform(-1, 1)
                 
             # Pengurangan kecepatan karena cuaca

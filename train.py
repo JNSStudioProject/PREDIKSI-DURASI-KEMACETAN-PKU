@@ -47,24 +47,46 @@ joblib.dump(scaler_X, 'models/pku_scaler_X.pkl')
 joblib.dump(scaler_y, 'models/pku_scaler_y.pkl')
 
 TIME_STEPS = 12
-X, y = [], []
+X_train, y_train = [], []
+X_val, y_val = [], []
+X_test, y_test = [], []
+
 routes = df_scaled.groupby(['origin', 'destination'])
 for (orig, dest), group in routes:
     group = group.sort_values(by='date_time').reset_index(drop=True)
     feat_values = group[features].values
     target_values = group['delay_minutes_scaled'].values
+    
+    route_X, route_y = [], []
     for i in range(len(group) - TIME_STEPS):
-        X.append(feat_values[i:i + TIME_STEPS])
-        y.append(target_values[i + TIME_STEPS])
+        route_X.append(feat_values[i:i + TIME_STEPS])
+        route_y.append(target_values[i + TIME_STEPS])
+        
+    route_X = np.array(route_X)
+    route_y = np.array(route_y)
+    
+    train_idx = int(len(route_X) * 0.70)
+    val_idx = int(len(route_X) * 0.85)
+    
+    X_train.extend(route_X[:train_idx])
+    y_train.extend(route_y[:train_idx])
+    X_val.extend(route_X[train_idx:val_idx])
+    y_val.extend(route_y[train_idx:val_idx])
+    X_test.extend(route_X[val_idx:])
+    y_test.extend(route_y[val_idx:])
 
-X = np.array(X)
-y = np.array(y)
+X_train = np.array(X_train)
+y_train = np.array(y_train)
+X_val = np.array(X_val)
+y_val = np.array(y_val)
+X_test = np.array(X_test)
+y_test = np.array(y_test)
 
-train_idx = int(len(X) * 0.70)
-val_idx = int(len(X) * 0.85)
-X_train, y_train = X[:train_idx], y[:train_idx]
-X_val, y_val = X[train_idx:val_idx], y[train_idx:val_idx]
-X_test, y_test = X[val_idx:], y[val_idx:]
+# Shuffle training data
+indices = np.arange(len(X_train))
+np.random.shuffle(indices)
+X_train = X_train[indices]
+y_train = y_train[indices]
 
 print(f"Train Shape: {X_train.shape}, {X_train.shape[1]}, {X_train.shape[2]}")
 

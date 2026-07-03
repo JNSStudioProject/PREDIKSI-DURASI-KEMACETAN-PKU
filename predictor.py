@@ -30,14 +30,15 @@ routes = {
     ("Harapan Raya", "Sudirman"): 3.8
 }
 
-def get_category(delay):
-    if delay < 2.0:
+def get_category(delay, distance):
+    delay_per_km = delay / distance
+    if delay_per_km < 0.3:
         return "Lancar"
-    elif delay < 4.5:
+    elif delay_per_km < 0.6:
         return "Agak Padat"
-    elif delay < 7.0:
+    elif delay_per_km < 1.0:
         return "Padat"
-    elif delay < 10.0:
+    elif delay_per_km < 1.5:
         return "Macet"
     return "Macet Total"
 
@@ -86,13 +87,13 @@ def predict_traffic(origin, destination, weather, temp_c, jam_pilihan, bulan_pil
     
     is_weekend = 1 if hari_pilihan in ["Sabtu", "Minggu"] else 0
 
-    # Membuat input sequensial 12 jam untuk LSTM
+    # Membuat input sequensial 12 jam untuk LSTM (dari target_hour - 12 sampai target_hour - 1)
     X = np.zeros((12, 10))
     # Volume diasumsikan rata-rata 300 kend/jam per km
     base_volume_route = distance * 300 
 
     for i in range(12):
-        h = (target_hour - 11 + i) % 24
+        h = (target_hour - 12 + i) % 24
         
         # 'origin_encoded', 'destination_encoded', 'distance_km', 'weather_encoded', 'is_weekend', 'is_rush_hour', 'traffic_volume', 'temperature_c', 'hour', 'month'
         X[i, 0] = orig_enc
@@ -123,9 +124,11 @@ def predict_traffic(origin, destination, weather, temp_c, jam_pilihan, bulan_pil
         delay = delay * 1.2 + 10.0 
         X[11, 6] *= 0.5 # Volume drop 50% (asumsi 1 lajur tertutup)
         
-    # Ambil volume untuk jam target
-    volume = float(X[11, 6])
-    
-    category = get_category(delay)
+    # Ambil volume untuk jam target, bukan jam target - 1
+    volume = get_base_volume_by_hour(f"{target_hour:02d}:00", base_volume_route)
+    if accident:
+        volume *= 0.5
+        
+    category = get_category(delay, distance)
 
     return volume, delay, category

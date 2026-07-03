@@ -121,9 +121,9 @@ with st.sidebar:
 
     st.markdown('<p class="sidebar-label">INPUT PARAMETERS</p>', unsafe_allow_html=True)
     
-    unique_places = sorted(list(set([r[0] for r in routes.keys()] + [r[1] for r in routes.keys()])))
-    origin = st.selectbox("Pilih Titik Asal", unique_places, index=unique_places.index("Simpang SKA"))
-    destination = st.selectbox("Pilih Titik Tujuan", unique_places, index=unique_places.index("Bandara SSK II"))
+    route_options = [f"{k[0]} ➔ {k[1]}" for k in routes.keys()]
+    selected_route = st.selectbox("Pilih Rute PKU", route_options, index=0)
+    origin, destination = selected_route.split(" ➔ ")
 
     jam_start, jam_end = st.select_slider(
         "Pilih Rentang Jam Operasional",
@@ -231,8 +231,8 @@ with st.sidebar:
     use_scenario_b = st.checkbox("Aktifkan Perbandingan (Skenario B)", value=False)
     if use_scenario_b:
         st.markdown('<p class="sidebar-label" style="margin-bottom: 10px;">PARAMETER SKENARIO B</p>', unsafe_allow_html=True)
-        origin_b = st.selectbox("Titik Asal (B)", unique_places, index=unique_places.index("Harapan Raya"))
-        destination_b = st.selectbox("Titik Tujuan (B)", unique_places, index=unique_places.index("Sudirman"))
+        selected_route_b = st.selectbox("Pilih Rute Alternatif (B)", route_options, index=1)
+        origin_b, destination_b = selected_route_b.split(" ➔ ")
         weather_clean_b = st.selectbox("Jenis cuaca (B)", ["Cerah", "Mendung", "Hujan Ringan", "Hujan Lebat"], index=2)
         temp_c_b = st.number_input("Suhu (°C) (B)", 20.0, 45.0, value=float(st.session_state.get("w_temp", 28.0)), step=0.5)
         is_accident_b = st.checkbox("Ada Kecelakaan (B)", value=True)
