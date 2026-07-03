@@ -335,8 +335,9 @@ else:
     
     # Perhitungan Statistik
     avg_vol = sum(res["list_volume"]) / len(res["list_volume"])
-    max_vol = max(res["list_volume"])
-    idx = res["list_volume"].index(max_vol)
+    max_delay = max(res["list_delay"])
+    idx = res["list_delay"].index(max_delay)
+    max_vol = res["list_volume"][idx]
     
     cat_colors = {
         "Lancar": "#22c55e",       # Green
@@ -352,8 +353,16 @@ else:
             <h1 style="margin:0; font-size:22px; font-weight:700; color:#1e293b;">Overview Analisis Rentang Arus Lalu Lintas</h1>
         </div>""", unsafe_allow_html=True)
 
-        min_vol = min(res["list_volume"])
-        idx_min = res["list_volume"].index(min_vol)
+        idx_min = -1
+        for i, cat in enumerate(res["list_category"]):
+            if cat == "Lancar":
+                idx_min = i
+                break
+        
+        if idx_min == -1:
+            min_delay = min(res["list_delay"])
+            idx_min = res["list_delay"].index(min_delay)
+            
         jam_terbaik = res["list_jam"][idx_min]
         status_terbaik = res["list_category"][idx_min]
         hemat_waktu = res["list_delay"][idx] - res["list_delay"][idx_min]
