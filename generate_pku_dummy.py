@@ -43,25 +43,41 @@ for route in routes:
                 
             weather = current_weather
             
-            # Cek Jam Sibuk (Rush Hour: 07-09, 16-18)
-            is_rush_hour = 1 if dt.hour in [7, 8, 16, 17] else 0
+            # Pola berdasarkan Hari
+            weekday_idx = dt.weekday()
+            is_weekend = 1 if weekday_idx >= 5 else 0
             
-            # Cek Weekend
-            is_weekend = 1 if dt.weekday() >= 5 else 0
+            if weekday_idx < 5: # Senin - Jumat
+                is_rush_hour = 1 if dt.hour in [7, 8, 12, 13, 16, 17, 18] else 0
+                hourly_profiles = {
+                    0: 0.1, 1: 0.05, 2: 0.05, 3: 0.05, 4: 0.1, 5: 0.3, 
+                    6: 0.7, 7: 1.0, 8: 0.9, 9: 0.7, 10: 0.6, 11: 0.6, 
+                    12: 0.9, 13: 0.8, 14: 0.6, 15: 0.7, 
+                    16: 0.8, 17: 1.0, 18: 0.9, 19: 0.6, 
+                    20: 0.4, 21: 0.3, 22: 0.2, 23: 0.1
+                }
+            elif weekday_idx == 5: # Sabtu
+                is_rush_hour = 1 if dt.hour in [16, 17, 18, 19, 20] else 0
+                hourly_profiles = {
+                    0: 0.1, 1: 0.05, 2: 0.05, 3: 0.05, 4: 0.1, 5: 0.2, 
+                    6: 0.4, 7: 0.5, 8: 0.6, 9: 0.6, 10: 0.7, 11: 0.8, 
+                    12: 0.8, 13: 0.8, 14: 0.9, 15: 0.9, 
+                    16: 1.0, 17: 1.1, 18: 1.1, 19: 1.2, 
+                    20: 1.1, 21: 0.9, 22: 0.6, 23: 0.3
+                }
+            else: # Minggu
+                is_rush_hour = 1 if dt.hour in [6, 7, 8, 9, 16, 17, 18, 19] else 0
+                hourly_profiles = {
+                    0: 0.1, 1: 0.05, 2: 0.05, 3: 0.05, 4: 0.1, 5: 0.3, 
+                    6: 0.9, 7: 1.1, 8: 1.0, 9: 0.9, 10: 0.7, 11: 0.7, 
+                    12: 0.8, 13: 0.8, 14: 0.8, 15: 0.9, 
+                    16: 1.0, 17: 1.1, 18: 1.0, 19: 0.9, 
+                    20: 0.7, 21: 0.5, 22: 0.3, 23: 0.1
+                }
             
             # Simulasi Volume Kendaraan (berdasarkan profil jam dan jarak)
             base_volume_route = distance_km * 300
-            hourly_profiles = {
-                0: 0.1, 1: 0.05, 2: 0.05, 3: 0.05, 4: 0.1, 
-                5: 0.3, 6: 0.7, 7: 1.0, 8: 0.9, 9: 0.7, 
-                10: 0.6, 11: 0.6, 12: 0.7, 13: 0.6, 14: 0.6, 
-                15: 0.7, 16: 0.9, 17: 1.0, 18: 0.9, 19: 0.6, 
-                20: 0.4, 21: 0.3, 22: 0.2, 23: 0.1
-            }
             volume_multiplier = hourly_profiles.get(dt.hour, 0.5)
-            
-            if is_weekend:
-                volume_multiplier *= 0.6
                 
             noise = random.uniform(0.9, 1.1)
             base_volume = int(base_volume_route * volume_multiplier * noise)
