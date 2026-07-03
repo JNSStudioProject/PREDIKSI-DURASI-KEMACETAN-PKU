@@ -5,7 +5,8 @@ import random
 import pydeck as pdk
 import requests
 import requests
-from predictor import predict_traffic
+import google.generativeai as genai
+from predictor import predict_traffic, routes
 from datetime import datetime, timedelta
 import urllib.parse
 from plotly.subplots import make_subplots
@@ -89,7 +90,7 @@ def local_css(file_name):
 
 @st.cache_data
 def load_csv_data():
-    return pd.read_csv("assets/csv/Metro_Interstate_Traffic_Volume.csv")
+    return pd.read_csv("assets/csv/PKU_Traffic.csv")
 
 local_css("assets/style.css")
 
@@ -98,6 +99,15 @@ local_css("assets/style.css")
 # ==========================================
 with st.sidebar:
     st.image("assets/img/logo.png", use_container_width=True)
+    
+    # Konfigurasi AI di belakang layar menggunakan st.secrets agar aman dari GitHub Push Protection
+    try:
+        gemini_api_key = st.secrets["GEMINI_API_KEY"]
+        genai.configure(api_key=gemini_api_key)
+    except KeyError:
+        # Fallback jika st.secrets belum di-set
+        pass
+        
     st.markdown("""
     <div class="sidebar-profile" style="padding-top: 0; border-top: none;">
         <h3 style="color: white; margin: 0; font-size: 16px; font-weight: 700;">
@@ -110,6 +120,10 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     st.markdown('<p class="sidebar-label">INPUT PARAMETERS</p>', unsafe_allow_html=True)
+    
+    unique_places = sorted(list(set([r[0] for r in routes.keys()] + [r[1] for r in routes.keys()])))
+    origin = st.selectbox("Pilih Titik Asal", unique_places, index=unique_places.index("Simpang SKA"))
+    destination = st.selectbox("Pilih Titik Tujuan", unique_places, index=unique_places.index("Bandara SSK II"))
 
     jam_start, jam_end = st.select_slider(
         "Pilih Rentang Jam Operasional",
@@ -126,15 +140,12 @@ with st.sidebar:
         "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
     ], index=5, key="sel_bulan")
 
-    musim = st.selectbox("Musim", [
-        "Summer (Jun-Agu)", "Fall (Sep-Nov)", "Winter (Des-Feb)", "Spring (Mar-Mei)"
-    ], index=0)
 
     def sync_weather():
         try:
-            # I-94 Minnesota coordinates
-            lat = 44.9537
-            lon = -93.0900
+            # Pekanbaru Minnesota coordinates
+            lat = 0.5071
+            lon = 101.4478
             api_key = "5432a1cdda54e77ad3ad70462235c24d"
             url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
             response = requests.get(url)
@@ -204,35 +215,31 @@ with st.sidebar:
         st.session_state.w_snow = 0.0
 
     weather = st.selectbox("Jenis cuaca", [
-        "Clear — Cerah", "Clouds — Berawan", "Rain — Hujan", "Snow — Salju"
+        "Cerah", "Mendung", "Hujan Ringan", "Hujan Lebat"
     ], key="w_idx")
     
-    weather_clean = weather.split(" — ")[0]
-    temp_c = st.number_input("Suhu (°C)", -30.0, 50.0, key="w_temp", step=0.5)
-    clouds = st.slider("Tutupan awan", 0, 100, key="w_clouds", format="%d%%")
-    rain = st.slider("Curah hujan 1 jam (mm)", 0.0, 50.0, key="w_rain", step=0.1)
-    snow = st.slider("Curah salju 1 jam (mm)", 0.0, 50.0, key="w_snow", step=0.1)
+    weather_clean = weather
+    temp_c = st.number_input("Suhu (°C)", 20.0, 45.0, value=float(st.session_state.get("w_temp", 28.0)), step=0.5)
+
+
 
     st.markdown('<hr style="border-color: #881337; margin: 20px 0;">', unsafe_allow_html=True)
     st.markdown('<p class="sidebar-label" style="margin-bottom: 10px;">SKENARIO KHUSUS</p>', unsafe_allow_html=True)
     is_accident = st.checkbox("Ada Kecelakaan lalu lintas", value=False)
-    is_roadwork = st.checkbox("Sedang Perbaikan Jalan", value=False)
 
     st.markdown('<hr style="border-color: #881337; margin: 20px 0;">', unsafe_allow_html=True)
     use_scenario_b = st.checkbox("Aktifkan Perbandingan (Skenario B)", value=False)
     if use_scenario_b:
         st.markdown('<p class="sidebar-label" style="margin-bottom: 10px;">PARAMETER SKENARIO B</p>', unsafe_allow_html=True)
-        weather_b = st.selectbox("Jenis cuaca (B)", ["Clear — Cerah", "Clouds — Berawan", "Rain — Hujan", "Snow — Salju"], index=2)
-        weather_clean_b = weather_b.split(" — ")[0]
-        temp_c_b = st.number_input("Suhu (°C) (B)", -30.0, 50.0, value=20.0, step=0.5)
-        clouds_b = st.slider("Tutupan awan (B)", 0, 100, value=80, format="%d%%")
-        rain_b = st.slider("Curah hujan (mm) (B)", 0.0, 50.0, value=15.0, step=0.1)
-        snow_b = st.slider("Curah salju (mm) (B)", 0.0, 50.0, value=0.0, step=0.1)
+        origin_b = st.selectbox("Titik Asal (B)", unique_places, index=unique_places.index("Harapan Raya"))
+        destination_b = st.selectbox("Titik Tujuan (B)", unique_places, index=unique_places.index("Sudirman"))
+        weather_clean_b = st.selectbox("Jenis cuaca (B)", ["Cerah", "Mendung", "Hujan Ringan", "Hujan Lebat"], index=2)
+        temp_c_b = st.number_input("Suhu (°C) (B)", 20.0, 45.0, value=float(st.session_state.get("w_temp", 28.0)), step=0.5)
         is_accident_b = st.checkbox("Ada Kecelakaan (B)", value=True)
-        is_roadwork_b = st.checkbox("Perbaikan Jalan (B)", value=False)
     else:
-        weather_clean_b = temp_c_b = clouds_b = rain_b = snow_b = is_accident_b = is_roadwork_b = None
-
+        origin_b = destination_b = weather_clean_b = None
+        is_accident_b = False
+    
     btn_predict = st.button("Jalankan Prediksi", type="primary", use_container_width=True)
 
 
@@ -252,14 +259,14 @@ if btn_predict:
     start_aktual = max(0, start_hour - 6)
     for h in range(start_aktual, start_hour):
         jam_f = f"{h:02d}:00"
-        vol, _, _ = predict_traffic(temp_c, rain, snow, clouds, weather_clean, jam_f, accident=is_accident, roadwork=is_roadwork)
+        vol, _, _ = predict_traffic(origin, destination, weather_clean, temp_c, jam_f, bulan, hari, accident=is_accident)
         vol_aktual = int(vol * random.uniform(0.92, 1.08)) # Noise +- 8% untuk data aktual
         aktual["jam"].append(jam_f)
         aktual["volume"].append(vol_aktual)
 
     for h in range(start_hour, end_hour + 1):
         jam_f = f"{h:02d}:00"
-        vol, delay, cat = predict_traffic(temp_c, rain, snow, clouds, weather_clean, jam_f, accident=is_accident, roadwork=is_roadwork)
+        vol, delay, cat = predict_traffic(origin, destination, weather_clean, temp_c, jam_f, bulan, hari, accident=is_accident)
         
         data["jam"].append(jam_f)
         data["volume"].append(vol)
@@ -272,7 +279,7 @@ if btn_predict:
         data_b = {"jam": [], "volume": [], "delay": [], "vc": [], "cat": []}
         for h in range(start_hour, end_hour + 1):
             jam_f = f"{h:02d}:00"
-            vol, delay, cat = predict_traffic(temp_c_b, rain_b, snow_b, clouds_b, weather_clean_b, jam_f, accident=is_accident_b, roadwork=is_roadwork_b)
+            vol, delay, cat = predict_traffic(origin_b, destination_b, weather_clean_b, temp_c_b, jam_f, bulan, hari, accident=is_accident_b)
             data_b["jam"].append(jam_f)
             data_b["volume"].append(vol)
             data_b["delay"].append(delay)
@@ -293,16 +300,14 @@ if btn_predict:
     peak_cat = max(data["cat"], key=lambda c: cat_order.index(c))
     
     if peak_cat in ["Macet", "Macet Total"]:
-        st.toast("Peringatan Dini: I-94 diprediksi lumpuh!", icon="🚨")
+        st.toast(f"Peringatan Dini: Rute {origin} - {destination} diprediksi macet parah!", icon="🚨")
     elif peak_cat == "Padat":
         st.toast("Lalu lintas terpantau padat pada rentang jam ini.", icon="⚠️")
     else:
         st.toast("Perjalanan diprediksi lancar.", icon="✅")
         
-    if is_accident:
-        st.toast("Laporan Kecelakaan aktif. Hati-hati di jalan!", icon="💥")
-    if snow > 10.0 or rain > 20.0:
-        st.toast("Cuaca Ekstrem Terdeteksi. Kurangi kecepatan!", icon="🌨️")
+    
+    
 
 # ==========================================
 # DISPLAY RESULTS
@@ -354,7 +359,7 @@ else:
         hemat_waktu = res["list_delay"][idx] - res["list_delay"][idx_min]
 
         if hemat_waktu > 0.05:
-            description = f"Saran keberangkatan dari AI TrafficLSTM. Tundaan diprediksi sangat rendah ({res['list_delay'][idx_min]:.2f} menit/mil). Hindari jam {res['list_jam'][idx]}!"
+            description = f"Saran keberangkatan dari AI TrafficLSTM. Tundaan diprediksi sangat rendah ({res['list_delay'][idx_min]:.0f} Menit). Hindari jam {res['list_jam'][idx]}!"
             
             c_tren, c_btn1, c_btn2 = st.columns([1.5, 1, 1])
             with c_tren:
@@ -376,18 +381,19 @@ else:
             st.markdown('<div class="card-title">Ringkasan Kondisi Jam Paling Sibuk</div>', unsafe_allow_html=True)
             c1, c2, c3 = st.columns(3)
             c1.metric("Jam Terpadat", res["list_jam"][idx], f"{max_vol:,.0f} kdr/jam")
-            c2.metric("Tundaan Puncak", f"{res['list_delay'][idx]:.3f}", "menit/mil")
+            c2.metric("Tundaan Puncak", f"{res['list_delay'][idx]:.0f} Menit")
             c3.markdown(f'<div class="metric-box"><div class="metric-title">Status</div><div class="metric-value" style="color:{peak_color}">{res["list_category"][idx].upper()}</div></div>', unsafe_allow_html=True)
 
+        if res["list_category"][idx] in ["Macet", "Macet Total"] or is_accident:
+            st.error(f"**Peringatan Kemacetan Parah:** Rute {origin} - {destination} diprediksi sangat padat pada jam {res['list_jam'][idx]}.")
+            
         if hemat_waktu > 0.05:
             # Construct comprehensive voice message
             msg_keberangkatan = f"Laporan lalu lintas cerdas. Saran keberangkatan Anda adalah jam {jam_terbaik}. Hindari keberangkatan jam {res['list_jam'][idx]} untuk menghemat waktu."
-            if is_accident:
-                msg_keberangkatan += " Peringatan darurat! Terdeteksi kecelakaan lalu lintas. Sangat disarankan mengambil rute alternatif Highway 61."
-            elif res["list_category"][idx] in ["Macet", "Macet Total"]:
-                msg_keberangkatan += f" Waspada! Jalur I-94 diprediksi macet total pada jam {res['list_jam'][idx]}. Pertimbangkan rute alternatif."
+            if res["list_category"][idx] in ["Macet", "Macet Total"]:
+                msg_keberangkatan += f" Waspada! Rute {origin} - {destination} diprediksi macet total pada jam {res['list_jam'][idx]}. Pertimbangkan rute alternatif."
                 
-            st.success(f"**Saran Waktu Keberangkatan:** Berangkatlah pada jam **{jam_terbaik}** (Status: {status_terbaik}). Hindari keberangkatan jam {res['list_jam'][idx]} untuk menghemat waktu tundaan hingga **{hemat_waktu:.2f} menit/mil**.")
+            st.success(f"**Saran Waktu Keberangkatan:** Waktu terbaik adalah jam **{jam_terbaik}** (Status: {status_terbaik}). Hindari keberangkatan jam {res['list_jam'][idx]} untuk menghemat waktu tundaan hingga **{hemat_waktu:.0f} Menit**.")
             
             # --- FITUR TTS (Otomatis & Manual) ---
             if not st.session_state.get("has_spoken", False):
@@ -416,24 +422,22 @@ else:
         else:
             st.info("**Info Lalu Lintas:** Arus relatif stabil di rentang waktu ini.")
 
-        if res["list_category"][idx] in ["Macet", "Macet Total"] or is_accident or is_roadwork:
-            st.error(f"**Peringatan Kemacetan Parah:** I-94 diprediksi lumpuh pada jam {res['list_jam'][idx]}.")
-            
+        if res["list_category"][idx] in ["Macet", "Macet Total"] or is_accident:
             # --- FITUR RUTE ALTERNATIF ---
             with st.container(border=True):
-                st.markdown('<div class="card-title">Saran Rute Alternatif (Hindari I-94)</div>', unsafe_allow_html=True)
+                st.markdown('<div class="card-title">Saran Rute Alternatif (Hindari Jalur Utama)</div>', unsafe_allow_html=True)
                 
-                # Simulasi perhitungan waktu tempuh (Asumsi normal: 20 menit)
-                waktu_i94 = 20 + (res['list_delay'][idx] * 10) # Sangat lambat
-                waktu_h61 = 20 + 5 # Alternatif jalan lokal (agak lambat)
-                waktu_i694 = 20 + 8 # Tol lingkar (lebih jauh, tapi lancar)
+                # Simulasi perhitungan waktu tempuh
+                waktu_utama = 15 + res['list_delay'][idx] 
+                waktu_alt1 = waktu_utama * 0.7 
+                waktu_alt2 = waktu_utama * 0.85
                 
                 c_r1, c_r2, c_r3 = st.columns(3)
-                c_r1.metric("I-94 (Utama)", f"{waktu_i94:.0f} Menit", "Macet Total", delta_color="inverse")
-                c_r2.metric("Highway 61", f"{waktu_h61:.0f} Menit", f"Hemat {waktu_i94 - waktu_h61:.0f} Menit", delta_color="normal")
-                c_r3.metric("I-694 Bypass", f"{waktu_i694:.0f} Menit", f"Hemat {waktu_i94 - waktu_i694:.0f} Menit", delta_color="normal")
+                c_r1.metric("Rute Utama", f"{waktu_utama:.0f} Menit", "Macet Total", delta_color="inverse")
+                c_r2.metric("Jalan Arteri / Lokal", f"{waktu_alt1:.0f} Menit", f"Hemat {waktu_utama - waktu_alt1:.0f} Menit", delta_color="normal")
+                c_r3.metric("Jalan Lingkar", f"{waktu_alt2:.0f} Menit", f"Hemat {waktu_utama - waktu_alt2:.0f} Menit", delta_color="normal")
                 
-                st.info("**Tips:** Highway 61 adalah opsi tercepat saat I-94 mengalami kecelakaan lalu lintas.")
+                st.info(f"**Tips:** Gunakan jalan arteri atau jalan lokal saat rute {origin} - {destination} mengalami kemacetan parah.")
 
         st.markdown('<div class="card-title" style="margin-top: 20px;">Grafik Aktual vs Prediksi</div>', unsafe_allow_html=True)
         
@@ -507,9 +511,9 @@ else:
 
     with tab2:
         st.markdown("""<div class="tab-header">
-            <h1 style="margin:0; font-size:22px; font-weight:700; color:#1e293b;">Peta Pantauan Arus Lalu Lintas I-94</h1>
+            <h1 style="margin:0; font-size:22px; font-weight:700; color:#1e293b;">Peta Pantauan Arus Lalu Lintas Pekanbaru</h1>
         </div>""", unsafe_allow_html=True)
-        st.markdown('<div class="card-title" style="margin-top: 20px;">Live Heatmap Area Minneapolis - St. Paul</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-title" style="margin-top: 20px;">Live Heatmap Area Pekanbaru</div>', unsafe_allow_html=True)
         
         # Slider Jam
         list_jam_options = res["list_jam"]
@@ -517,48 +521,80 @@ else:
         
         # Dapatkan index dari jam yang dipilih
         idx_jam = list_jam_options.index(selected_jam)
+        delay_at_jam = res["list_delay"][idx_jam]
         vol_at_jam = res["list_volume"][idx_jam]
         
-        # Segmentasi Rute I-94 menjadi 3 segmen dengan volume bervariasi
-        vol_seg1 = vol_at_jam * 1.10 # Mpls Downtown (Lebih padat)
-        vol_seg2 = vol_at_jam * 1.00 # Bridge (Normal)
-        vol_seg3 = vol_at_jam * 0.95 # St Paul (Sedikit lebih lengang)
+        # Segmentasi Rute Pekanbaru menjadi 3 segmen dengan delay bervariasi
+        delay_seg1 = delay_at_jam * 1.10 # Lebih macet
+        delay_seg2 = delay_at_jam * 1.00 # Normal
+        delay_seg3 = delay_at_jam * 0.95 # Sedikit lebih lancar
         
-        # Helper function for color
-        def get_rgb_from_vol(v):
-            if v < 3000: return [34, 197, 94, 255] # Lancar (Green)
-            elif v < 4500: return [234, 179, 8, 255] # Agak Padat (Yellow)
-            elif v < 5500: return [239, 68, 68, 255] # Padat (Red)
-            elif v < 6500: return [185, 28, 28, 255] # Macet (Dark Red)
+        vol_seg1 = vol_at_jam * 1.10
+        vol_seg2 = vol_at_jam * 1.00
+        vol_seg3 = vol_at_jam * 0.95
+        
+        # Helper function for color based on delay (sama dengan logika di predictor.py)
+        def get_rgb_from_delay(d):
+            if d < 2.0: return [34, 197, 94, 255] # Lancar (Green)
+            elif d < 4.5: return [234, 179, 8, 255] # Agak Padat (Yellow)
+            elif d < 7.0: return [239, 68, 68, 255] # Padat (Red)
+            elif d < 10.0: return [185, 28, 28, 255] # Macet (Dark Red)
             else: return [127, 29, 29, 255] # Macet Total (Very Dark Red)
             
-        def get_cat_from_vol(v):
-            if v < 3000: return "Lancar"
-            elif v < 4500: return "Agak Padat"
-            elif v < 5500: return "Padat"
-            elif v < 6500: return "Macet"
+        def get_cat_from_delay(d):
+            if d < 2.0: return "Lancar"
+            elif d < 4.5: return "Agak Padat"
+            elif d < 7.0: return "Padat"
+            elif d < 10.0: return "Macet"
             else: return "Macet Total"
+
+        # Koordinat titik-titik di Pekanbaru
+        coords = {
+            "Simpang SKA": [101.4208, 0.5003],
+            "Bandara SSK II": [101.4468, 0.4608],
+            "Panam (UNRI)": [101.3785, 0.4789],
+            "Pasar Pusat": [101.4491, 0.5367],
+            "Rumbai": [101.4398, 0.5694],
+            "Jl. Sudirman (MTQ)": [101.4550, 0.4870],
+            "Kantor Gubernur": [101.4485, 0.5212],
+            "Pandau": [101.4645, 0.4192],
+            "Simpang Tiga": [101.4518, 0.4578],
+            "Harapan Raya": [101.4650, 0.4900],
+            "Sudirman": [101.4500, 0.5000]
+        }
+        
+        start_coord = coords.get(origin, [101.4208, 0.5003])
+        end_coord = coords.get(destination, [101.4468, 0.4608])
+        
+        # Buat titik-titik perantara untuk 3 segmen
+        lon1, lat1 = start_coord
+        lon2, lat2 = end_coord
+        
+        pt1 = [lon1, lat1]
+        pt2 = [lon1 + (lon2 - lon1)*0.33, lat1 + (lat2 - lat1)*0.33]
+        pt3 = [lon1 + (lon2 - lon1)*0.66, lat1 + (lat2 - lat1)*0.66]
+        pt4 = [lon2, lat2]
 
         path_data = pd.DataFrame({
             "path": [
-                [[-93.28, 44.975], [-93.24, 44.968], [-93.22, 44.965]], # Mpls
-                [[-93.22, 44.965], [-93.18, 44.960], [-93.15, 44.956]], # Bridge
-                [[-93.15, 44.956], [-93.12, 44.952], [-93.09, 44.950]]  # St Paul
+                [pt1, pt2],
+                [pt2, pt3],
+                [pt3, pt4]
             ],
             "color": [
-                get_rgb_from_vol(vol_seg1),
-                get_rgb_from_vol(vol_seg2),
-                get_rgb_from_vol(vol_seg3)
+                get_rgb_from_delay(delay_seg1),
+                get_rgb_from_delay(delay_seg2),
+                get_rgb_from_delay(delay_seg3)
             ],
             "nama_rute": [
-                "Segmen 1: Minneapolis Downtown",
-                "Segmen 2: Jembatan I-94",
-                "Segmen 3: St. Paul Downtown"
+                f"Segmen 1 ({origin} Awal)",
+                f"Segmen 2 (Tengah Rute)",
+                f"Segmen 3 (Menuju {destination})"
             ],
             "status": [
-                f"Status: {get_cat_from_vol(vol_seg1).upper()} ({vol_seg1:,.0f} kend/jam)",
-                f"Status: {get_cat_from_vol(vol_seg2).upper()} ({vol_seg2:,.0f} kend/jam)",
-                f"Status: {get_cat_from_vol(vol_seg3).upper()} ({vol_seg3:,.0f} kend/jam)"
+                f"Status: {get_cat_from_delay(delay_seg1).upper()} ({vol_seg1:,.0f} kend/jam, {delay_seg1:.1f} mnt delay)",
+                f"Status: {get_cat_from_delay(delay_seg2).upper()} ({vol_seg2:,.0f} kend/jam, {delay_seg2:.1f} mnt delay)",
+                f"Status: {get_cat_from_delay(delay_seg3).upper()} ({vol_seg3:,.0f} kend/jam, {delay_seg3:.1f} mnt delay)"
             ]
         })
 
@@ -576,9 +612,9 @@ else:
         st.pydeck_chart(pdk.Deck(
             map_style="dark",
             initial_view_state=pdk.ViewState(
-                latitude=44.96,
-                longitude=-93.17,
-                zoom=11.5,
+                latitude=0.5071,
+                longitude=101.4478,
+                zoom=12,
                 pitch=45,
             ),
             layers=[
@@ -603,19 +639,19 @@ else:
         st.markdown("""<div class="tab-header">
             <h1 style="margin:0; font-size:22px; font-weight:700; color:#1e293b;">Dataset Interaktif Historis</h1>
         </div>""", unsafe_allow_html=True)
-        st.markdown('<div class="card-title" style="margin-top: 20px;">Metro Interstate Traffic Volume</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-title" style="margin-top: 20px;">PKU Traffic Dummy Dataset</div>', unsafe_allow_html=True)
         col1, col2 = st.columns([4, 1])
         with col1:
-            st.markdown("Berikut adalah tabel data historis lalu lintas I-94 yang ditarik secara langsung dari file CSV asli Anda.", unsafe_allow_html=True)
+            st.markdown("Berikut adalah tabel data historis lalu lintas Pekanbaru yang ditarik secara langsung dari file CSV asli Anda.", unsafe_allow_html=True)
         
         try:
             df_asli = load_csv_data()
             with col2:
-                with open("assets/csv/Metro_Interstate_Traffic_Volume.csv", "rb") as file:
+                with open("assets/csv/PKU_Traffic.csv", "rb") as file:
                     st.download_button(
                         label="Download CSV Dataset",
                         data=file,
-                        file_name='Metro_Interstate_Traffic_Volume.csv',
+                        file_name='PKU_Traffic.csv',
                         mime='text/csv',
                         type="primary"
                     )
@@ -650,7 +686,7 @@ else:
             df_asli = load_csv_data()
             # Ambil 500 jam terakhir (seperti di grafik asli)
             df_sample = df_asli.tail(500).reset_index(drop=True)
-            actual_line = df_sample['traffic_volume'].values
+            actual_line = df_sample['delay_minutes'].values
             
             # Membuat garis prediksi dengan akurasi tinggi (R2 0.98) berdasarkan data aktual
             import numpy as np
@@ -700,24 +736,32 @@ else:
             # Tambahkan pesan user ke memori
             st.session_state.messages.append({"role": "user", "content": prompt})
 
-            # Logika Bot Cerdas (Rule-Based Menganalisis State)
-            prompt_lower = prompt.lower()
-            response = "Maaf, saya kurang mengerti. Anda bisa bertanya tentang: 'Kapan jalan sepi?', 'Apakah ada kemacetan?', atau 'Berapa lama tundaannya?'."
-            
-            if any(word in prompt_lower for word in ["sepi", "lancar", "terbaik", "berangkat"]):
-                response = f"Berdasarkan prediksi, jalan paling lancar adalah jam **{res['list_jam'][idx_min]}** dengan volume sekitar **{min_vol:,.0f} kendaraan/jam** (Status: {res['list_category'][idx_min]})."
-            elif any(word in prompt_lower for word in ["macet", "padat", "parah", "tundaan"]):
-                if res['list_category'][idx] in ["Macet", "Macet Total"]:
-                    response = f"Ya, diprediksi terjadi kemacetan sangat parah pada jam **{res['list_jam'][idx]}** dengan puncak tundaan **{res['list_delay'][idx]:.2f} menit/mil**. Sangat disarankan lewat rute alternatif!"
-                else:
-                    response = f"Kondisi lalu lintas relatif aman hari ini, puncak kepadatan hanya akan terjadi di jam **{res['list_jam'][idx]}**."
-            elif any(word in prompt_lower for word in ["kecelakaan", "perbaikan", "cuaca"]):
-                if is_accident:
-                    response = "Saat ini sistem mendeteksi ada skenario Kecelakaan Lalu Lintas yang memperparah kemacetan di I-94."
-                elif is_roadwork:
-                    response = "Ada skenario perbaikan jalan yang menyebabkan lajur menyempit."
-                else:
-                    response = "Tidak ada skenario kecelakaan atau perbaikan jalan aktif saat ini."
+            if gemini_api_key:
+                try:
+                    # Siapkan prompt sistem tak terlihat berisi data prediksi
+                    context = f"Konteks Data Prediksi Lalu Lintas:\nRute: {origin} ke {destination}\nHari/Tanggal: {res['hari']}\nJam Prediksi: {res['jam_awal']} s/d {res['jam_akhir']}\nData Prediksi per Jam:\n"
+                    for i in range(len(res["list_jam"])):
+                        context += f"- Jam {res['list_jam'][i]}: Volume {res['list_volume'][i]:.0f}, Tundaan {res['list_delay'][i]:.1f} Menit, Status {res['list_category'][i]}\n"
+                    if is_accident:
+                        context += "\nStatus Khusus: Sedang terjadi KECELAKAAN lalu lintas yang memperparah kemacetan.\n"
+                    
+                    context += "\nKamu adalah Asisten AI cerdas untuk aplikasi TrafficLSTM. Gunakan data di atas untuk menjawab pertanyaan user secara akurat, ramah, dan ringkas. Jawab sebagai asisten lalu lintas yang profesional. Jangan berhalusinasi data selain yang ada di konteks."
+                    
+                    model = genai.GenerativeModel("gemini-2.5-flash", system_instruction=context)
+                    
+                    # Konversi format memory st.session_state ke format Gemini
+                    gemini_history = []
+                    for msg in st.session_state.messages[:-1]: # Jangan masukkan prompt terakhir
+                        role = "model" if msg["role"] == "assistant" else "user"
+                        gemini_history.append({"role": role, "parts": [msg["content"]]})
+                    
+                    chat = model.start_chat(history=gemini_history)
+                    response_obj = chat.send_message(prompt)
+                    response = response_obj.text
+                except Exception as e:
+                    response = f"Maaf, terjadi kesalahan saat menghubungi Gemini AI: {e}. Pastikan API Key valid dan terhubung internet."
+            else:
+                response = "Maaf, fitur asisten pintar (Gemini AI) belum aktif. Silakan masukkan **Gemini API Key** Anda di menu **PENGATURAN AI** pada panel sebelah kiri (sidebar) agar saya bisa menjawab pertanyaan Anda!"
 
             # Tambahkan balasan bot ke memori
             st.session_state.messages.append({"role": "assistant", "content": response})
@@ -787,10 +831,10 @@ else:
         @st.cache_data
         def get_ts_data():
             df_asli = load_csv_data()
-            df_asli['date_time'] = pd.to_datetime(df_asli['date_time'], format='mixed', dayfirst=False)
+            df_asli['date'] = pd.to_datetime(df_asli['date'], format='mixed', dayfirst=False)
             df_asli = df_asli.sort_values('date_time').drop_duplicates(subset='date_time').reset_index(drop=True)
-            ts_daily = df_asli.set_index('date_time')['traffic_volume'].resample('D').mean().dropna()
-            ts_hourly = df_asli.set_index('date_time')['traffic_volume'].dropna()
+            ts_daily = df_asli.set_index('date_time')['delay_minutes'].resample('D').mean().dropna()
+            ts_hourly = df_asli.set_index('date_time')['delay_minutes'].dropna()
             return ts_daily, ts_hourly
             
         try:
