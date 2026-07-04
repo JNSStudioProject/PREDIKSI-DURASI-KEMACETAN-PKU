@@ -103,12 +103,12 @@ model = Sequential([
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss=Huber(), metrics=['mae'])
 
 callbacks = [
-    EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True, verbose=1),
-    ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-6, verbose=1)
+    EarlyStopping(monitor='val_loss', patience=8, restore_best_weights=True, verbose=1),
+    ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=4, min_lr=1e-6, verbose=1)
 ]
 
 print("Training model...")
-model.fit(X_train, y_train, epochs=20, batch_size=32, validation_data=(X_val, y_val), callbacks=callbacks, verbose=1)
+model.fit(X_train, y_train, epochs=35, batch_size=32, validation_data=(X_val, y_val), callbacks=callbacks, verbose=1)
 
 model.save("models/pku_lstm_model.keras")
 print("Model and scalers saved successfully!")

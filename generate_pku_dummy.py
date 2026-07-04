@@ -159,8 +159,9 @@ def get_congestion_factor_route(route, hour, is_wknd, is_hol, is_ram, is_mud, is
     cf = 0.0
 
     if tipe == "komuter":
-        # Pandau -> Simpang Tiga: puncak 06-08.30 & 16.30-19
-        cf = gaussian_peak(hour, 7.0, 1.2, 1.0) + gaussian_peak(hour, 17.5, 1.5, 0.95)
+        # Pandau -> Simpang Tiga: puncak 06-08.30 & 16.00-19.30 (arus balik lebih parah)
+        # + sustained midday traffic (sekolah, ojol, aktivitas siang)
+        cf = gaussian_peak(hour, 7.0, 1.5, 1.15) + gaussian_peak(hour, 17.5, 2.0, 1.25) + gaussian_peak(hour, 12.5, 1.5, 0.35)
         if is_wknd:
             cf *= 0.30  # Weekend sangat sepi
         if is_hol:
@@ -168,12 +169,12 @@ def get_congestion_factor_route(route, hour, is_wknd, is_hol, is_ram, is_mud, is
         if is_mud:
             cf *= 0.50  # Mudik: banyak yang pulang kampung
         if is_ram:
-            # Ngabuburit: puncak sore lebih awal
-            cf += gaussian_peak(hour, 16.5, 1.0, 0.35)
+            # Ngabuburit: puncak sore lebih awal & lebih parah
+            cf += gaussian_peak(hour, 16.5, 1.2, 0.40)
 
     elif tipe == "bandara":
         # SKA -> Bandara: jadwal penerbangan pagi & sore
-        cf = gaussian_peak(hour, 6.5, 1.5, 0.85) + gaussian_peak(hour, 17.0, 1.5, 0.80)
+        cf = gaussian_peak(hour, 6.5, 1.8, 0.90) + gaussian_peak(hour, 17.0, 1.8, 0.85)
         # Weekend tetap ramai (penerbangan tetap jalan)
         if is_wknd:
             cf *= 0.85
@@ -183,8 +184,8 @@ def get_congestion_factor_route(route, hour, is_wknd, is_hol, is_ram, is_mud, is
             cf *= 1.20  # Mudik sangat ramai
 
     elif tipe == "kampus":
-        # Panam -> SKA: jam kuliah
-        cf = gaussian_peak(hour, 7.5, 0.8, 1.05) + gaussian_peak(hour, 12.5, 0.8, 0.60) + gaussian_peak(hour, 17.0, 1.2, 0.80)
+        # Panam -> SKA: jam kuliah (puncak pagi tajam, siang jeda, sore pulang)
+        cf = gaussian_peak(hour, 7.5, 1.0, 1.10) + gaussian_peak(hour, 12.5, 1.0, 0.65) + gaussian_peak(hour, 17.0, 1.5, 0.90)
         if is_wknd:
             cf *= 0.20  # Weekend sangat sepi
         if is_hol:
@@ -195,8 +196,8 @@ def get_congestion_factor_route(route, hour, is_wknd, is_hol, is_ram, is_mud, is
             cf *= 0.30
 
     elif tipe == "pasar_industri":
-        # Pasar Pusat -> Rumbai: pasar pagi buta + shift industri
-        cf = gaussian_peak(hour, 6.5, 1.8, 0.95) + gaussian_peak(hour, 15.0, 1.5, 0.50)
+        # Pasar Pusat -> Rumbai: pasar pagi buta + shift industri sore
+        cf = gaussian_peak(hour, 6.5, 2.0, 1.00) + gaussian_peak(hour, 15.5, 1.8, 0.60)
         if is_wknd:
             cf *= 0.55  # Pasar masih buka, tapi industri libur
         if is_hol:
@@ -206,7 +207,7 @@ def get_congestion_factor_route(route, hour, is_wknd, is_hol, is_ram, is_mud, is
 
     elif tipe == "perkantoran":
         # Sudirman MTQ -> Kantor Gubernur: jam kantor klasik
-        cf = gaussian_peak(hour, 7.5, 0.7, 1.0) + gaussian_peak(hour, 12.5, 0.7, 0.40) + gaussian_peak(hour, 16.5, 0.8, 0.85)
+        cf = gaussian_peak(hour, 7.5, 0.9, 1.05) + gaussian_peak(hour, 12.5, 0.9, 0.45) + gaussian_peak(hour, 16.5, 1.0, 0.90)
         if is_wknd:
             cf *= 0.10  # Sangat sepi weekend
         if is_hol:

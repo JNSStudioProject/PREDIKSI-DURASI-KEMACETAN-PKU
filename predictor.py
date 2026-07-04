@@ -53,23 +53,23 @@ def get_congestion_factor(tipe, hour, is_wknd, hari_pilihan):
     cf = 0.0
 
     if tipe == "komuter":
-        cf = gaussian_peak(hour, 7.0, 1.2, 1.0) + gaussian_peak(hour, 17.5, 1.5, 0.95)
+        cf = gaussian_peak(hour, 7.0, 1.5, 1.15) + gaussian_peak(hour, 17.5, 2.0, 1.25) + gaussian_peak(hour, 12.5, 1.5, 0.35)
         if is_wknd:
             cf *= 0.30
     elif tipe == "bandara":
-        cf = gaussian_peak(hour, 6.5, 1.5, 0.85) + gaussian_peak(hour, 17.0, 1.5, 0.80)
+        cf = gaussian_peak(hour, 6.5, 1.8, 0.90) + gaussian_peak(hour, 17.0, 1.8, 0.85)
         if is_wknd:
             cf *= 0.85
     elif tipe == "kampus":
-        cf = gaussian_peak(hour, 7.5, 0.8, 1.05) + gaussian_peak(hour, 12.5, 0.8, 0.60) + gaussian_peak(hour, 17.0, 1.2, 0.80)
+        cf = gaussian_peak(hour, 7.5, 1.0, 1.10) + gaussian_peak(hour, 12.5, 1.0, 0.65) + gaussian_peak(hour, 17.0, 1.5, 0.90)
         if is_wknd:
             cf *= 0.20
     elif tipe == "pasar_industri":
-        cf = gaussian_peak(hour, 6.5, 1.8, 0.95) + gaussian_peak(hour, 15.0, 1.5, 0.50)
+        cf = gaussian_peak(hour, 6.5, 2.0, 1.00) + gaussian_peak(hour, 15.5, 1.8, 0.60)
         if is_wknd:
             cf *= 0.55
     elif tipe == "perkantoran":
-        cf = gaussian_peak(hour, 7.5, 0.7, 1.0) + gaussian_peak(hour, 12.5, 0.7, 0.40) + gaussian_peak(hour, 16.5, 0.8, 0.85)
+        cf = gaussian_peak(hour, 7.5, 0.9, 1.05) + gaussian_peak(hour, 12.5, 0.9, 0.45) + gaussian_peak(hour, 16.5, 1.0, 0.90)
         if is_wknd:
             cf *= 0.10
     elif tipe == "komersial":
