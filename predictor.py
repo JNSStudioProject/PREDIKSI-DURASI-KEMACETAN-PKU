@@ -22,12 +22,12 @@ le_weather = joblib.load("models/le_weather.pkl")
 
 # Definisi rute valid
 routes = {
-    ("Simpang SKA", "Bandara SSK II"): 8.5,
-    ("Panam (UNRI)", "Simpang SKA"): 5.2,
-    ("Pasar Pusat", "Rumbai"): 7.0,
-    ("Jl. Sudirman (MTQ)", "Kantor Gubernur"): 4.5,
-    ("Pandau", "Simpang Tiga"): 6.0,
-    ("Harapan Raya", "Sudirman"): 3.8
+    ("Simpang SKA", "Bandara SSK II"): (8.5, 300),
+    ("Panam (UNRI)", "Simpang SKA"): (5.2, 450),
+    ("Pasar Pusat", "Rumbai"): (7.0, 250),
+    ("Jl. Sudirman (MTQ)", "Kantor Gubernur"): (4.5, 400),
+    ("Pandau", "Simpang Tiga"): (6.0, 150),
+    ("Harapan Raya", "Sudirman"): (3.8, 380)
 }
 
 def get_category(delay, distance):
@@ -80,13 +80,16 @@ def get_is_rush_hour(h, hari="Senin"):
         return 1 if h in [7, 8, 12, 13, 16, 17, 18] else 0
 
 def predict_traffic(origin, destination, weather, temp_c, jam_pilihan, bulan_pilihan="Mar", hari_pilihan="Senin", accident=False):
-    # Jarak
-    distance = routes.get((origin, destination))
-    if distance is None:
+    # Jarak dan Kepadatan Dasar
+    route_info = routes.get((origin, destination))
+    if route_info is None:
         # Jika rute tidak ada di daftar, buat jarak acak (pseudo-random berdasarkan nama)
         # agar simulasi tetap terlihat dinamis (antara 3 km sampai 15 km)
         hash_val = hash(origin + destination)
         distance = 3.0 + (abs(hash_val) % 120) / 10.0
+        base_density = 300
+    else:
+        distance, base_density = route_info
         
     # Encoder
     try:
@@ -114,8 +117,8 @@ def predict_traffic(origin, destination, weather, temp_c, jam_pilihan, bulan_pil
 
     # Membuat input sequensial 12 jam untuk LSTM (dari target_hour - 12 sampai target_hour - 1)
     X = np.zeros((12, 10))
-    # Volume diasumsikan rata-rata 300 kend/jam per km
-    base_volume_route = distance * 300 
+    # Volume didasarkan pada base_density masing-masing rute
+    base_volume_route = distance * base_density 
 
     for i in range(12):
         h = (target_hour - 12 + i) % 24

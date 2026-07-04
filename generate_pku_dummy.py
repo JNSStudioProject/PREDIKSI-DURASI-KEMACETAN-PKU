@@ -3,14 +3,14 @@ import numpy as np
 from datetime import datetime, timedelta
 import random
 
-# Definisi Lokasi dan Jarak (dalam KM)
+# Definisi Lokasi dan Jarak (dalam KM) dan Base Density
 routes = [
-    ("Simpang SKA", "Bandara SSK II", 8.5),
-    ("Panam (UNRI)", "Simpang SKA", 5.2),
-    ("Pasar Pusat", "Rumbai", 7.0),
-    ("Jl. Sudirman (MTQ)", "Kantor Gubernur", 4.5),
-    ("Pandau", "Simpang Tiga", 6.0),
-    ("Harapan Raya", "Sudirman", 3.8)
+    ("Simpang SKA", "Bandara SSK II", 8.5, 300),
+    ("Panam (UNRI)", "Simpang SKA", 5.2, 450),
+    ("Pasar Pusat", "Rumbai", 7.0, 250),
+    ("Jl. Sudirman (MTQ)", "Kantor Gubernur", 4.5, 400),
+    ("Pandau", "Simpang Tiga", 6.0, 150),
+    ("Harapan Raya", "Sudirman", 3.8, 380)
 ]
 
 # Cuaca dan Bobotnya
@@ -25,7 +25,7 @@ HOURS_PER_DAY = 24
 data = []
 
 for route in routes:
-    origin, destination, distance_km = route
+    origin, destination, distance_km, base_density = route
     
     # We will simulate weather so it doesn't jump randomly every hour, but holds for a few hours
     current_weather = random.choices(weathers, weights=weather_weights)[0]
@@ -76,7 +76,7 @@ for route in routes:
                 }
             
             # Simulasi Volume Kendaraan (berdasarkan profil jam dan jarak)
-            base_volume_route = distance_km * 300
+            base_volume_route = distance_km * base_density
             volume_multiplier = hourly_profiles.get(dt.hour, 0.5)
                 
             noise = random.uniform(0.9, 1.1)
