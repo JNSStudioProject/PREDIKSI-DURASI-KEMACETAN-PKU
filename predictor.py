@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import joblib
 from tensorflow.keras.models import load_model
 import tensorflow.keras.layers as layers
@@ -20,89 +21,94 @@ le_origin = joblib.load("models/le_origin.pkl")
 le_dest = joblib.load("models/le_dest.pkl")
 le_weather = joblib.load("models/le_weather.pkl")
 
-# Definisi rute valid
+# Definisi rute valid: (distance_km, speed_free_flow, speed_min_macet, base_volume, tipe)
 routes = {
-    ("Simpang SKA", "Bandara SSK II"): (8.5, 300),
-    ("Panam (UNRI)", "Simpang SKA"): (5.2, 450),
-    ("Pasar Pusat", "Rumbai"): (7.0, 250),
-    ("Jl. Sudirman (MTQ)", "Kantor Gubernur"): (4.5, 400),
-    ("Pandau", "Simpang Tiga"): (6.0, 150),
-    ("Harapan Raya", "Sudirman"): (3.8, 380)
+    ("Pandau", "Simpang Tiga"): (12.0, 42, 10, 2800, "komuter"),
+    ("Simpang SKA", "Bandara SSK II"): (8.5, 40, 15, 2200, "bandara"),
+    ("Panam (UNRI)", "Simpang SKA"): (6.0, 38, 10, 2500, "kampus"),
+    ("Pasar Pusat", "Rumbai"): (10.0, 35, 12, 2000, "pasar_industri"),
+    ("Jl. Sudirman (MTQ)", "Kantor Gubernur"): (5.0, 40, 12, 2400, "perkantoran"),
+    ("Harapan Raya", "Sudirman"): (7.5, 35, 10, 2600, "komersial"),
 }
 
 def get_category(delay, distance):
     delay_per_km = delay / distance
-    if delay_per_km < 0.3:
+    if delay_per_km < 0.5:
         return "Lancar"
-    elif delay_per_km < 0.6:
+    elif delay_per_km < 1.2:
         return "Agak Padat"
-    elif delay_per_km < 1.0:
+    elif delay_per_km < 2.5:
         return "Padat"
-    elif delay_per_km < 1.5:
+    elif delay_per_km < 4.0:
         return "Macet"
     return "Macet Total"
 
-def get_base_volume_by_hour(jam_str, base_volume=1500, hari="Senin"):
-    hour = int(jam_str.split(":")[0])
-    # Profil lalu lintas
-    if hari == "Sabtu":
-        hourly_profiles = {
-            0: 0.1, 1: 0.05, 2: 0.05, 3: 0.05, 4: 0.1, 5: 0.2, 
-            6: 0.4, 7: 0.5, 8: 0.6, 9: 0.6, 10: 0.7, 11: 0.8, 
-            12: 0.8, 13: 0.8, 14: 0.9, 15: 0.9, 
-            16: 1.0, 17: 1.1, 18: 1.1, 19: 1.2, 
-            20: 1.1, 21: 0.9, 22: 0.6, 23: 0.3
-        }
-    elif hari == "Minggu":
-        hourly_profiles = {
-            0: 0.1, 1: 0.05, 2: 0.05, 3: 0.05, 4: 0.1, 5: 0.3, 
-            6: 0.9, 7: 1.1, 8: 1.0, 9: 0.9, 10: 0.7, 11: 0.7, 
-            12: 0.8, 13: 0.8, 14: 0.8, 15: 0.9, 
-            16: 1.0, 17: 1.1, 18: 1.0, 19: 0.9, 
-            20: 0.7, 21: 0.5, 22: 0.3, 23: 0.1
-        }
-    else:
-        hourly_profiles = {
-            0: 0.1, 1: 0.05, 2: 0.05, 3: 0.05, 4: 0.1, 5: 0.3, 
-            6: 0.7, 7: 1.0, 8: 0.9, 9: 0.7, 10: 0.6, 11: 0.6, 
-            12: 0.9, 13: 0.8, 14: 0.6, 15: 0.7, 
-            16: 0.8, 17: 1.0, 18: 0.9, 19: 0.6, 
-            20: 0.4, 21: 0.3, 22: 0.2, 23: 0.1
-        }
-    return base_volume * hourly_profiles.get(hour, 0.5)
 
-def get_is_rush_hour(h, hari="Senin"):
-    if hari == "Sabtu":
-        return 1 if h in [16, 17, 18, 19, 20] else 0
-    elif hari == "Minggu":
-        return 1 if h in [6, 7, 8, 9, 16, 17, 18, 19] else 0
-    else:
-        return 1 if h in [7, 8, 12, 13, 16, 17, 18] else 0
+def gaussian_peak(hour, center, sigma, amplitude):
+    return amplitude * math.exp(-0.5 * ((hour - center) / sigma) ** 2)
+
+
+def get_congestion_factor(tipe, hour, is_wknd, hari_pilihan):
+    """Menghitung congestion_factor berdasarkan tipe rute dan jam."""
+    cf = 0.0
+
+    if tipe == "komuter":
+        cf = gaussian_peak(hour, 7.0, 1.2, 1.0) + gaussian_peak(hour, 17.5, 1.5, 0.95)
+        if is_wknd:
+            cf *= 0.30
+    elif tipe == "bandara":
+        cf = gaussian_peak(hour, 6.5, 1.5, 0.85) + gaussian_peak(hour, 17.0, 1.5, 0.80)
+        if is_wknd:
+            cf *= 0.85
+    elif tipe == "kampus":
+        cf = gaussian_peak(hour, 7.5, 0.8, 1.05) + gaussian_peak(hour, 12.5, 0.8, 0.60) + gaussian_peak(hour, 17.0, 1.2, 0.80)
+        if is_wknd:
+            cf *= 0.20
+    elif tipe == "pasar_industri":
+        cf = gaussian_peak(hour, 6.5, 1.8, 0.95) + gaussian_peak(hour, 15.0, 1.5, 0.50)
+        if is_wknd:
+            cf *= 0.55
+    elif tipe == "perkantoran":
+        cf = gaussian_peak(hour, 7.5, 0.7, 1.0) + gaussian_peak(hour, 12.5, 0.7, 0.40) + gaussian_peak(hour, 16.5, 0.8, 0.85)
+        if is_wknd:
+            cf *= 0.10
+    elif tipe == "komersial":
+        cf = gaussian_peak(hour, 11.0, 3.0, 0.55) + gaussian_peak(hour, 18.0, 2.5, 0.75) + gaussian_peak(hour, 14.0, 2.0, 0.45)
+        if is_wknd:
+            cf *= 1.25
+
+    cf += 0.03  # baseline malam
+    return max(0.0, cf)
+
+
+def get_volume_from_cf(cf, base_vol):
+    return int(base_vol * (0.3 + 0.9 * cf))
+
 
 def predict_traffic(origin, destination, weather, temp_c, jam_pilihan, bulan_pilihan="Mar", hari_pilihan="Senin", accident=False):
-    # Jarak dan Kepadatan Dasar
+    # Ambil info rute
     route_info = routes.get((origin, destination))
     if route_info is None:
-        # Jika rute tidak ada di daftar, buat jarak acak (pseudo-random berdasarkan nama)
-        # agar simulasi tetap terlihat dinamis (antara 3 km sampai 15 km)
         hash_val = hash(origin + destination)
         distance = 3.0 + (abs(hash_val) % 120) / 10.0
-        base_density = 300
+        speed_ff = 40
+        speed_min = 12
+        base_vol = 2000
+        tipe = "komuter"
     else:
-        distance, base_density = route_info
+        distance, speed_ff, speed_min, base_vol, tipe = route_info
         
     # Encoder
     try:
         orig_enc = le_origin.transform([origin])[0]
     except ValueError:
-        orig_enc = 0 # Fallback jika label tidak dikenal
+        orig_enc = 0
 
     try:
         dest_enc = le_dest.transform([destination])[0]
     except ValueError:
         dest_enc = 0
     
-    # Pastikan cuaca ada di encoder (fallback ke Cerah jika gagal)
     try:
         weather_enc = le_weather.transform([weather])[0]
     except:
@@ -115,24 +121,24 @@ def predict_traffic(origin, destination, weather, temp_c, jam_pilihan, bulan_pil
     
     is_weekend = 1 if hari_pilihan in ["Sabtu", "Minggu"] else 0
 
-    # Membuat input sequensial 12 jam untuk LSTM (dari target_hour - 12 sampai target_hour - 1)
+    # Membuat input sequensial 12 jam untuk LSTM
     X = np.zeros((12, 10))
-    # Volume didasarkan pada base_density masing-masing rute
-    base_volume_route = distance * base_density 
 
     for i in range(12):
         h = (target_hour - 12 + i) % 24
         
-        # 'origin_encoded', 'destination_encoded', 'distance_km', 'weather_encoded', 'is_weekend', 'is_rush_hour', 'traffic_volume', 'temperature_c', 'hour', 'month'
+        cf = get_congestion_factor(tipe, h, is_weekend, hari_pilihan)
+        is_rush = 1 if cf >= 0.45 else 0
+        volume = get_volume_from_cf(cf, base_vol)
+        
         X[i, 0] = orig_enc
         X[i, 1] = dest_enc
         X[i, 2] = distance
         X[i, 3] = weather_enc
         X[i, 4] = is_weekend
-        # Hitung rush hour historis
-        X[i, 5] = get_is_rush_hour(h, hari_pilihan)
-        X[i, 6] = get_base_volume_by_hour(f"{h:02d}:00", base_volume_route, hari_pilihan)
-        X[i, 7] = temp_c # Suhu konstan untuk sequence simulasi ini
+        X[i, 5] = is_rush
+        X[i, 6] = volume
+        X[i, 7] = temp_c
         X[i, 8] = h
         X[i, 9] = month_num
 
@@ -142,20 +148,17 @@ def predict_traffic(origin, destination, weather, temp_c, jam_pilihan, bulan_pil
     pred_scaled = model.predict(X_scaled, verbose=0)
     delay = scaler_y.inverse_transform(pred_scaled)[0][0]
     
-    # Jangan sampai delay negatif
     delay = max(0.0, float(delay))
     
-    # Heuristik untuk skenario khusus
+    # Heuristik untuk kecelakaan
     if accident:
-        # Berdasarkan riset, base delay rata-rata kecelakaan adalah ~10 menit.
-        # Namun di jalan yang sudah padat, kecelakaan memberi efek berantai (multiplier).
-        delay = delay * 1.2 + 10.0 
-        X[11, 6] *= 0.5 # Volume drop 50% (asumsi 1 lajur tertutup)
-        
-    # Ambil volume untuk jam target, bukan jam target - 1
-    volume = get_base_volume_by_hour(f"{target_hour:02d}:00", base_volume_route)
+        delay = delay * 1.2 + 10.0
+
+    # Volume untuk jam target
+    cf_target = get_congestion_factor(tipe, target_hour, is_weekend, hari_pilihan)
+    volume = get_volume_from_cf(cf_target, base_vol)
     if accident:
-        volume *= 0.5
+        volume = int(volume * 0.5)
         
     category = get_category(delay, distance)
 
